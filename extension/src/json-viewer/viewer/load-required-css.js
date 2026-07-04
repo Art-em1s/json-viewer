@@ -1,29 +1,18 @@
-var Promise = require('promise');
-var loadCss = require('../load-css');
-var themeDarkness = require('../theme-darkness');
+import { loadCss } from "../load-css.js";
+import themeDarkness from "../theme-darkness.js";
 
-function loadRequiredCss(options) {
-  var theme = options.theme;
-  var loaders = [];
-  loaders.push(loadCss({
-    path: "assets/viewer.css",
-    checkClass: "json-viewer-css-check"
-  }));
+export default async function loadRequiredCss(options) {
+  const loaders = [loadCss("assets/viewer.css")];
 
+  const theme = options.theme;
   if (theme && theme !== "default") {
-    loaders.push(loadCss({
-      path: "themes/" + themeDarkness(theme) + "/" + theme + ".css",
-      checkClass: "theme-" + theme + "-css-check"
-    }));
+    // A missing theme file should not prevent highlighting
+    loaders.push(loadCss(`themes/${themeDarkness(theme)}/${theme}.css`).catch(() => {}));
   }
 
-  return Promise.all(loaders).then(function() {
-    var style = document.createElement("style");
-    style.rel = "stylesheet";
-    style.type = "text/css";
-    style.innerHTML = options.style;
-    document.head.appendChild(style);
-  });
-}
+  await Promise.all(loaders);
 
-module.exports = loadRequiredCss;
+  const style = document.createElement("style");
+  style.textContent = options.style;
+  document.head.appendChild(style);
+}

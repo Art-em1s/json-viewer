@@ -1,3 +1,34 @@
+# 0.19.0 - 2026-07-04
+
+Full modernization: Manifest V3, lazy loading, native JSON pipeline, minimal pinned dependencies.
+
+**Performance**
+* The content script injected into every page is now a ~3.5 KB detector; the CodeMirror viewer bundle (~230 KB) is dynamically imported only on pages that actually contain JSON. Previously the full bundle was parsed and evaluated on every page visited.
+* JSON parsing/formatting now uses native `JSON.parse` source access + `JSON.rawJSON` (Chrome 114+) instead of regex validation passes and a char-by-char number-wrapping walk — ~3.2x faster on a 5 MB document, with byte-exact number preservation (`8.4127988E8` and `1e-5` are now preserved verbatim too; previously only exponents written with `+` survived).
+* Options are read directly from `chrome.storage` — no more message round-trip through a background page.
+* CSS is loaded via `link.onload` instead of polling computed styles with `requestAnimationFrame`.
+
+**Platform**
+* Manifest V3: background service worker, `options_ui`, `host_permissions`, removed the redundant `*://*/*` permission and the obsolete `offline_enabled` key. Requires Chrome 114+.
+* `window.json` is now set through `chrome.scripting` MAIN-world injection, so it also works on pages with a strict Content-Security-Policy (the old inline `<script>` was blocked there).
+* Options stored in `chrome.storage.local` as plain objects (previously double-encoded JSON strings in `localStorage`); existing settings are migrated automatically right after the update via a one-shot offscreen document (service workers cannot read the old `localStorage`).
+
+**Security**
+* CodeMirror upgraded 5.21 → 5.65.21, fixing CVE-2020-7760 (ReDoS in the JavaScript mode used to highlight JSON).
+* Dependencies reduced to one runtime package (codemirror) and two dev packages (esbuild, sass), all exact-pinned, `npm audit` clean, installed with `ignore-scripts`. Removed webpack 1, node-sass, sweetalert, mousetrap, promise, archiver, fs-extra.
+* URL entity-decoding now uses an inert `DOMParser` document instead of `innerHTML` on a live element (removes an XSS/resource-fetch vector via crafted JSON strings).
+* Anchor-wrapped links now get `rel="noopener"`; the anti-hijack `while(1);`/`for(;;);` strippers are anchored to the document start so JSON containing those strings in values is never corrupted.
+
+**Cleanup**
+* Removed console noise on end-user pages and omnibox keystroke logging; removed the dead `goo.gl` shortlink from the manifest.
+* The options page uses a native confirm dialog and inline toasts instead of sweetalert; the scratch-pad shortcut uses a plain keydown listener instead of mousetrap.
+* New esbuild-based build (`npm run build` / `npm run release`) and a Node test suite (`npm test`) covering the JSON detection/formatting pipeline against the fixture files.
+
+**Behavior notes**
+* Empty objects/arrays now print as `{}`/`[]` on one line (previously an empty indented block).
+* The scratch pad Format button now only reformats valid JSON (it previously best-effort-formatted invalid text).
+* Malformed-but-tolerated documents (e.g. leading-zero numbers) still highlight via a fallback path, but `window.json` is not set for them.
+
 # 0.18.1 - 2020-12-22
 
 * Update viewer-custom.scss #267 (fix blank space)

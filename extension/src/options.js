@@ -1,61 +1,76 @@
-require('./options-styles');
-var CodeMirror = require('codemirror');
-require('codemirror/addon/fold/foldcode');
-require('codemirror/addon/fold/foldgutter');
-require('codemirror/addon/fold/brace-fold');
-require('codemirror/mode/javascript/javascript');
-require('codemirror/addon/hint/show-hint');
-require('codemirror/addon/hint/css-hint');
-require('codemirror/mode/css/css');
-var sweetAlert = require('sweetalert');
+import CodeMirror from "codemirror";
+import "codemirror/addon/fold/foldcode.js";
+import "codemirror/addon/fold/foldgutter.js";
+import "codemirror/addon/fold/brace-fold.js";
+import "codemirror/mode/javascript/javascript.js";
+import "codemirror/addon/hint/show-hint.js";
+import "codemirror/addon/hint/css-hint.js";
+import "codemirror/mode/css/css.js";
 
-var Storage = require('./json-viewer/storage');
-var renderThemeList = require('./json-viewer/options/render-theme-list');
-var renderAddons = require('./json-viewer/options/render-addons');
-var renderStructure = require('./json-viewer/options/render-structure');
-var renderStyle = require('./json-viewer/options/render-style');
-var bindSaveButton = require('./json-viewer/options/bind-save-button');
-var bindResetButton = require('./json-viewer/options/bind-reset-button');
+import { loadOptions, saveOptions } from "./json-viewer/storage.js";
+import { migrateLegacyOptions } from "./json-viewer/migrate-legacy.js";
+import renderThemeList from "./json-viewer/options/render-theme-list.js";
+import renderAddons from "./json-viewer/options/render-addons.js";
+import renderStructure from "./json-viewer/options/render-structure.js";
+import renderStyle from "./json-viewer/options/render-style.js";
+import bindResetButton from "./json-viewer/options/bind-reset-button.js";
+import showToast from "./json-viewer/options/toast.js";
 
-function isValidJSON(pseudoJSON) {
+function parseSection(name, text) {
+  let value;
   try {
-    JSON.parse(pseudoJSON);
-    return true;
-
-  } catch(e) {
-    return false;
+    value = JSON.parse(text);
+  } catch {
+    throw new Error(`"${name}" isn't a valid JSON`);
   }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`"${name}" must be a JSON object`);
+  }
+  return value;
 }
 
 function renderVersion() {
-  var version = process.env.VERSION;
-  var versionLink = document.getElementsByClassName('version')[0];
-  versionLink.innerHTML = version;
-  versionLink.href = "https://github.com/tulios/json-viewer/tree/" + version;
+  const version = chrome.runtime.getManifest().version;
+  const versionLink = document.getElementsByClassName("version")[0];
+  versionLink.textContent = version;
+  versionLink.href = `https://github.com/tulios/json-viewer/tree/${version}`;
 }
 
-function onLoaded() {
-  var currentOptions = Storage.load();
+function bindSaveButton(themesInput, addonsEditor, structureEditor, styleEditor) {
+  document.getElementById("options").onsubmit = () => false;
+
+  document.getElementById("save").onclick = async (e) => {
+    e.preventDefault();
+
+    try {
+      const options = {
+        theme: themesInput.value,
+        addons: parseSection("Add-ons", addonsEditor.getValue()),
+        structure: parseSection("Structure", structureEditor.getValue()),
+        style: styleEditor.getValue()
+      };
+      await saveOptions(options);
+      showToast("Options saved!", "success");
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  };
+}
+
+async function onLoaded() {
+  await migrateLegacyOptions();
+  const currentOptions = await loadOptions();
 
   renderVersion();
   renderThemeList(CodeMirror, currentOptions.theme);
-  var addonsEditor = renderAddons(CodeMirror, currentOptions.addons);
-  var structureEditor = renderStructure(CodeMirror, currentOptions.structure);
-  var styleEditor = renderStyle(CodeMirror, currentOptions.style);
+  const addonsEditor = renderAddons(CodeMirror, currentOptions.addons);
+  const structureEditor = renderStructure(CodeMirror, currentOptions.structure);
+  const styleEditor = renderStyle(CodeMirror, currentOptions.style);
 
   bindResetButton();
-  bindSaveButton([addonsEditor, structureEditor, styleEditor], function(options) {
-    if (!isValidJSON(options.addons)) {
-      sweetAlert("Ops!", "\"Add-ons\" isn't a valid JSON", "error");
-
-    } else if (!isValidJSON(options.structure)) {
-      sweetAlert("Ops!", "\"Structure\" isn't a valid JSON", "error");
-
-    } else {
-      Storage.save(options);
-      sweetAlert("Success", "Options saved!", "success");
-    }
-  });
+  bindSaveButton(document.getElementById("themes"), addonsEditor, structureEditor, styleEditor);
 }
 
-document.addEventListener("DOMContentLoaded", onLoaded, false);
+document.addEventListener("DOMContentLoaded", () => {
+  onLoaded().catch((e) => console.error("[JSONViewer] error: " + e.message, e));
+});
