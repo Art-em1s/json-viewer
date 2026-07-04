@@ -1,5 +1,5 @@
 export default {
-  theme: "default",
+  theme: "cobalt",
   addons: {
     prependHeader: true,
     maxJsonSize: 400,

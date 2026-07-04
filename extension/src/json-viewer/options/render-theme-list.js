@@ -67,8 +67,12 @@ export default function renderThemeList(CodeMirror, selected) {
   themesInput.onchange = () => onThemeChange(themesInput, themeEditor);
 
   themesInput.appendChild(createOption("default", selected));
-  themesInput.appendChild(createThemeGroup("Light", themesList.light, selected));
-  themesInput.appendChild(createThemeGroup("Dark", themesList.dark, selected));
+  if (themesList.light.length > 0) {
+    themesInput.appendChild(createThemeGroup("Light", themesList.light, selected));
+  }
+  if (themesList.dark.length > 0) {
+    themesInput.appendChild(createThemeGroup("Dark", themesList.dark, selected));
+  }
 
   if (selected && selected !== "default") {
     onThemeChange(themesInput, themeEditor);
