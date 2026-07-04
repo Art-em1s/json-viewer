@@ -4,10 +4,6 @@ html, body {
   height: 100%;
 }
 
-.json-viewer-css-check:before {
-  content: 'loaded';
-  display: none;
-}
 
 .read-only .CodeMirror-cursor {
   visibility: hidden;

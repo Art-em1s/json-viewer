@@ -1,10 +1,8 @@
-var jsonFormater = require('../jsl-format');
-var loadCss = require('../load-css');
-var themeDarkness = require('../theme-darkness');
+import { loadCss } from "../load-css.js";
+import themeDarkness from "../theme-darkness.js";
 
-var themeDefault = "default";
-var themesList = process.env.THEMES;
-var themeJSONExample = {
+const themesList = __THEMES__;
+const themeJSONExample = {
   title: "JSON Example",
   nested: {
     someInteger: 7,
@@ -15,40 +13,48 @@ var themeJSONExample = {
       "and fake keys"
     ]
   }
-}
+};
 
-function onThemeChange(input, editor) {
-  var selectedTheme = input.options[input.selectedIndex].value;
-  // Split '_' to allow themes with variations (e.g: solarized dark; solarized light)
-  var themeOption = selectedTheme.replace(/_/, ' ');
+function onThemeChange(themesInput, editor) {
+  const selectedTheme = themesInput.value;
+  // Underscore marks a theme variation (e.g. solarized_dark -> "solarized dark")
+  const themeOption = selectedTheme.replace(/_/, " ");
 
-  var currentLinkTag = document.getElementById('selected-theme');
-  if (currentLinkTag !== null) {
-    document.head.removeChild(currentLinkTag);
-  }
-
-  var themeToLoad = {
-    id: "selected-theme",
-    path: "themes/" + themeDarkness(selectedTheme) + "/" + selectedTheme + ".css",
-    checkClass: "theme-" + selectedTheme + "-css-check"
-  };
+  document.getElementById("selected-theme")?.remove();
 
   if (selectedTheme === "default") {
     editor.setOption("theme", themeOption);
-
-  } else {
-    loadCss(themeToLoad).then(function() {
-      editor.setOption("theme", themeOption);
-    });
+    return;
   }
+
+  loadCss(`themes/${themeDarkness(selectedTheme)}/${selectedTheme}.css`, "selected-theme")
+    .then(() => editor.setOption("theme", themeOption))
+    .catch(() => {});
 }
 
-function renderThemeList(CodeMirror, value) {
-  var themesInput = document.getElementById('themes');
-  var themesExampleInput = document.getElementById('themes-example');
-  themesExampleInput.innerHTML = jsonFormater(JSON.stringify(themeJSONExample));
+function createOption(theme, optionSelected) {
+  const option = document.createElement("option");
+  option.value = theme;
+  option.text = theme;
+  if (theme === optionSelected) option.selected = true;
+  return option;
+}
 
-  var themeEditor = CodeMirror.fromTextArea(themesExampleInput, {
+function createThemeGroup(label, list, optionSelected) {
+  const group = document.createElement("optgroup");
+  group.label = label;
+  for (const theme of list) {
+    group.appendChild(createOption(theme, optionSelected));
+  }
+  return group;
+}
+
+export default function renderThemeList(CodeMirror, selected) {
+  const themesInput = document.getElementById("themes");
+  const themesExampleInput = document.getElementById("themes-example");
+  themesExampleInput.value = JSON.stringify(themeJSONExample, null, 2);
+
+  const themeEditor = CodeMirror.fromTextArea(themesExampleInput, {
     readOnly: true,
     mode: "application/ld+json",
     lineWrapping: true,
@@ -58,44 +64,13 @@ function renderThemeList(CodeMirror, value) {
     gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
   });
 
-  themes.onchange = function() {
+  themesInput.onchange = () => onThemeChange(themesInput, themeEditor);
+
+  themesInput.appendChild(createOption("default", selected));
+  themesInput.appendChild(createThemeGroup("Light", themesList.light, selected));
+  themesInput.appendChild(createThemeGroup("Dark", themesList.dark, selected));
+
+  if (selected && selected !== "default") {
     onThemeChange(themesInput, themeEditor);
   }
-
-  var optionSelected = value;
-  themesInput.appendChild(createOption(themeDefault, optionSelected));
-  themesInput.appendChild(createThemeGroup("Light", themesList.light, optionSelected));
-  themesInput.appendChild(createThemeGroup("Dark", themesList.dark, optionSelected));
-
-  if (optionSelected && optionSelected !== "default") {
-    themes.onchange();
-  }
 }
-
-function createOption(theme, optionSelected) {
-  var option = document.createElement("option");
-  option.value = theme
-  option.text = theme;
-
-  if (theme === optionSelected) {
-    option.selected = "selected";
-  }
-
-  return option;
-}
-
-function createGroup(label) {
-  var group = document.createElement("optgroup");
-  group.label = label;
-  return group;
-}
-
-function createThemeGroup(name, list, optionSelected) {
-  var group = createGroup(name);
-  list.forEach(function(theme) {
-    group.appendChild(createOption(theme, optionSelected));
-  });
-  return group;
-}
-
-module.exports = renderThemeList;

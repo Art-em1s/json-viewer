@@ -1,32 +1,35 @@
-var JSONUtils = require('./json-viewer/check-if-json');
-var highlightContent = require('./json-viewer/highlight-content');
-var loadScratchPadEditor = require('./json-viewer/scratch-pad/load-editor');
+import { init } from "./viewer.js";
+import { loadOptions } from "./json-viewer/storage.js";
+import { migrateLegacyOptions } from "./json-viewer/migrate-legacy.js";
+import loadScratchPad from "./json-viewer/scratch-pad/load-editor.js";
+import renderOversizeAlert from "./json-viewer/oversize-alert.js";
 
-function onLoad() {
-  var pre = document.getElementsByTagName("pre")[0];
-  var query = window.location.search.substring(1);
-
-  if (isScratchPad(query)) handleScratchPad(pre);
-  else handleJSONHighlight(pre, query);
-}
-
-function handleScratchPad(pre) {
+async function highlight(pre, options) {
   pre.hidden = true;
-  loadScratchPadEditor(pre);
+  const ok = await init(pre, options, false);
+  if (!ok) pre.hidden = false;
 }
 
-function handleJSONHighlight(pre, query) {
-  var rawJson = query.replace(/^json=/, '');
-  pre.innerText = decodeURIComponent(rawJson);
+async function onLoad() {
+  await migrateLegacyOptions();
 
-  JSONUtils.checkIfJson(function(pre) {
+  const pre = document.querySelector("pre");
+  const query = window.location.search.substring(1);
+  const options = await loadOptions();
+
+  if (/scratch-page=true/.test(query)) {
     pre.hidden = true;
-    highlightContent(pre, true);
-  }, pre);
+    await loadScratchPad(pre, options);
+    return;
+  }
+
+  pre.textContent = decodeURIComponent(query.replace(/^json=/, ""));
+  if (pre.textContent.length > options.addons.maxJsonSize * 1024) {
+    return renderOversizeAlert(pre, options, () => highlight(pre, options));
+  }
+  await highlight(pre, options);
 }
 
-function isScratchPad(query) {
-  return /scratch-page=true/.test(query);
-}
-
-document.addEventListener("DOMContentLoaded", onLoad, false);
+document.addEventListener("DOMContentLoaded", () => {
+  onLoad().catch((e) => console.error("[JSONViewer] error: " + e.message, e));
+});

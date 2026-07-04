@@ -60,7 +60,7 @@ function relativePath() {
 
 function absolutePath() {
     return "(?:(?:https?|ftp)://)" +        /* protocol identifier*/
-        "(?:\\S+(?::\\S*)?@)?" +            /* user:pass authentication*/
+        "(?:[^\\s@:]+(?::[^\\s@]*)?@)?" +   /* user:pass authentication (disjoint classes: no backtracking blowup)*/
         "(?:" +
         "(?:\\[[a-f0-9.:]+\\])" +           /* IPv6 or hybrid addresses*/
         "|" +
@@ -70,4 +70,4 @@ function absolutePath() {
         relativePath();                     /* resource path*/
 }
 
-module.exports = new RegExp("^(" + absolutePath() + "|" + relativePath() + ")$", "i");
+export default new RegExp("^(" + absolutePath() + "|" + relativePath() + ")$", "i");

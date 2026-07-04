@@ -1,16 +1,12 @@
-var defaults = require('./defaults');
-
-function renderStyle(CodeMirror, value) {
-  var styleInput = document.getElementById('style');
-  styleInput.innerHTML = value;
+export default function renderStyle(CodeMirror, value) {
+  const styleInput = document.getElementById("style");
+  styleInput.value = value;
 
   return CodeMirror.fromTextArea(styleInput, {
     mode: "css",
     lineWrapping: true,
     lineNumbers: true,
     tabSize: 2,
-    extraKeys: {"Ctrl-Space": "autocomplete"}
+    extraKeys: { "Ctrl-Space": "autocomplete" }
   });
 }
-
-module.exports = renderStyle;

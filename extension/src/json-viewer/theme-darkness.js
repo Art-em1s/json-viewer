@@ -1,7 +1,6 @@
-var themes = process.env.THEMES;
-module.exports = function(name) {
-  var darkness = "light";
-  if (themes.dark.indexOf(name) !== -1) darkness = "dark";
+// __THEMES__ is injected at build time from the extension/themes directory
+const themes = __THEMES__;
 
-  return darkness;
+export default function themeDarkness(name) {
+  return themes.dark.includes(name) ? "dark" : "light";
 }

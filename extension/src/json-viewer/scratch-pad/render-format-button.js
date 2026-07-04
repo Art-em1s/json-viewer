@@ -1,26 +1,24 @@
-var svgFormat = require('./svg-format');
-var Mousetrap = require('mousetrap');
-require('mousetrap/plugins/global-bind/mousetrap-global-bind');
+import svgFormat from "./svg-format.js";
 
-function renderFormatButton(onFormatClick) {
-  var extras = document.getElementsByClassName("extras")[0];
+export default function renderFormatButton(onFormatClick) {
+  const extras = document.getElementsByClassName("extras")[0];
 
-  var formatLink = document.createElement("a");
+  const formatLink = document.createElement("a");
   formatLink.className = "json_viewer icon format";
   formatLink.href = "#";
   formatLink.title = "Format (ctrl+shift+F / command+shift+F)";
   formatLink.innerHTML = svgFormat;
-  formatLink.onclick = function(e) {
+  formatLink.onclick = (e) => {
     e.preventDefault();
     onFormatClick();
-  }
+  };
 
-  Mousetrap.bindGlobal(['command+shift+f', 'ctrl+shift+f'], function() {
-    onFormatClick();
-    return false;
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      onFormatClick();
+    }
   });
 
   extras.appendChild(formatLink);
 }
-
-module.exports = renderFormatButton;

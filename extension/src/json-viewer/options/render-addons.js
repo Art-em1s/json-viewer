@@ -1,8 +1,6 @@
-var jsonFormater = require('../jsl-format');
-
-function renderAddons(CodeMirror, value) {
-  var addonsInput = document.getElementById('addons');
-  addonsInput.innerHTML = jsonFormater(JSON.stringify(value));
+export default function renderAddons(CodeMirror, value) {
+  const addonsInput = document.getElementById("addons");
+  addonsInput.value = JSON.stringify(value, null, 2);
 
   return CodeMirror.fromTextArea(addonsInput, {
     mode: "application/ld+json",
@@ -11,5 +9,3 @@ function renderAddons(CodeMirror, value) {
     tabSize: 2
   });
 }
-
-module.exports = renderAddons;
