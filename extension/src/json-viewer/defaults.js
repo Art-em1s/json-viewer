@@ -2,7 +2,7 @@ export default {
   theme: "cobalt",
   addons: {
     prependHeader: true,
-    maxJsonSize: 400,
+    maxJsonSize: 10240,
     alwaysFold: false,
     alwaysRenderAllContent: false,
     sortKeys: false,

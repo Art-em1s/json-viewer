@@ -12,11 +12,21 @@ import timestamp from "./json-viewer/timestamp.js";
 // Highlights the JSON document held by `pre`. Returns false when the text
 // turns out not to be JSON (the caller restores the raw page).
 // `insidePage` is true in the content-script context and false on the
-// omnibox extension page.
-export async function init(pre, options, insidePage = true) {
+// omnibox extension page. `performanceMode` (used when the maxJsonSize gate
+// is bypassed) turns off the editor features that make huge documents
+// unresponsive: line wrapping, fold gutter, clickable URLs and auto-fold.
+export async function init(pre, options, insidePage = true, performanceMode = false) {
   const raw = pre.textContent;
   const loc = locateJson(raw);
   if (!loc) return false;
+
+  if (performanceMode) {
+    options = {
+      ...options,
+      structure: { ...options.structure, lineWrapping: false, foldGutter: false },
+      addons: { ...options.addons, clickableUrls: false, alwaysFold: false, awaysFold: false }
+    };
+  }
 
   let result;
   try {

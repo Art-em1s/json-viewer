@@ -130,14 +130,36 @@ function customFormat(tree, tabSize, indentCStyle, showArraySize) {
   return out.join("");
 }
 
-// Parses and re-formats a JSON document without losing number precision.
-// Returns {formatted, decoded}: the pretty-printed text and the minified
-// JSON used for window.json. Throws on input that is not JSON.
-export function reformatJson(text, { sortKeys = false, tabSize = 2, indentCStyle = false, showArraySize = false } = {}) {
+// Above this size the rawJSON precision wrappers cost more than they are
+// worth (~3-4x slower and ~2x the peak memory, measured on a 5-300MB sweep);
+// numbers in bigger documents are re-canonicalized by the plain parse.
+const PRECISION_SIZE_LIMIT = 10 * 1024 * 1024;
+
+// Parses and re-formats a JSON document without losing number precision
+// (up to maxPrecisionBytes). Returns {formatted, decoded}: the pretty-printed
+// text and the minified JSON used for window.json. Throws on input that is
+// not JSON.
+export function reformatJson(text, {
+  sortKeys = false,
+  tabSize = 2,
+  indentCStyle = false,
+  showArraySize = false,
+  maxPrecisionBytes = PRECISION_SIZE_LIMIT
+} = {}) {
   let tree;
   let unwrap = null;
 
-  if (HAS_RAW_JSON) {
+  if (HAS_RAW_JSON && text.length > maxPrecisionBytes) {
+    try {
+      tree = JSON.parse(text);
+    } catch (strictError) {
+      try {
+        ({ tree, unwrap } = lenientParse(text));
+      } catch {
+        throw strictError;
+      }
+    }
+  } else if (HAS_RAW_JSON) {
     try {
       tree = JSON.parse(text, numberPreservingReviver);
     } catch (strictError) {
