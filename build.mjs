@@ -20,7 +20,9 @@ fs.mkdirSync(path.join(OUT, "assets"), { recursive: true });
 // Without a .theme.css, the stock CodeMirror theme css is used — looked up
 // by name, then by the name's prefix before "_" (solarized_dark -> solarized).
 function themeNames(darkness) {
-  return fs.readdirSync(path.join(SRC, "themes", darkness), { withFileTypes: true })
+  const dir = path.join(SRC, "themes", darkness);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();

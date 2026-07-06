@@ -2,6 +2,17 @@
 
 Full modernization: Manifest V3, lazy loading, native JSON pipeline, minimal pinned dependencies.
 
+**Large documents** (limits measured empirically: the V8 string cap makes ~300 MB the absolute input ceiling — the pretty-printed output of anything bigger cannot exist as a string)
+* `maxJsonSize` default raised 400 KB → 10 MB (10240); on modern hardware the pipeline formats 10 MB in well under a second.
+* "Highlight anyway" on oversized documents now renders in a reduced performance mode: line wrapping, fold gutter, clickable URLs and auto-fold are disabled so 50–100 MB documents stay responsive.
+* Number-precision preservation applies up to 10 MB; larger documents use the plain parse (3–4× faster, half the peak memory), matching how most numbers rendered before 0.19 anyway.
+* `window.json` exposure is skipped above 32 MB (Chrome's extension messaging hard-fails around 64 MB).
+
+**Copying**
+* New hover copy button in the gutter: copies the hovered row, or — when the row opens an object/array — the entire node including that row; on the root row it copies the whole JSON. Works on collapsed nodes.
+* Clicking a collapsed fold placeholder (↔) now selects the whole folded node for copying instead of expanding it; double-click expands. Gutter arrows still toggle folds.
+* Fixed selection/cursor overlays being drawn ~5px right of the text (a legacy margin hack double-shifted them under CodeMirror 5.65), which made it easy to miss the first or last character of a selection.
+
 **Performance**
 * The content script injected into every page is now a ~3.5 KB detector; the CodeMirror viewer bundle (~230 KB) is dynamically imported only on pages that actually contain JSON. Previously the full bundle was parsed and evaluated on every page visited.
 * JSON parsing/formatting now uses native `JSON.parse` source access + `JSON.rawJSON` (Chrome 114+) instead of regex validation passes and a char-by-char number-wrapping walk — ~3.2x faster on a 5 MB document, with byte-exact number preservation (`8.4127988E8` and `1e-5` are now preserved verbatim too; previously only exponents written with `+` survived).

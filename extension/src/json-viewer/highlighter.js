@@ -10,6 +10,8 @@ import "codemirror/addon/search/search.js";
 import "codemirror/mode/javascript/javascript.js";
 import defaults from "./defaults.js";
 import URL_PATTERN from "./url-pattern.js";
+import bindCopyOnHover from "./copy-on-hover.js";
+import bindFoldSelection from "./fold-select.js";
 
 // Decodes HTML entities (&amp; &#63; ...) that some APIs embed in URLs.
 // DOMParser documents are inert: nothing is fetched and no handlers run,
@@ -20,6 +22,16 @@ function decodeEntities(text) {
 
 function stripQuotes(text) {
   return text.replace(/^"+/, "").replace(/"+$/, "");
+}
+
+// The fold addon clones this element (attributes survive, listeners would
+// not) — the click/double-click behavior lives in fold-select.js
+function makeFoldMarker() {
+  const marker = document.createElement("span");
+  marker.className = "CodeMirror-foldmarker";
+  marker.textContent = "↔";
+  marker.title = "Click to select for copying · double-click to unfold";
+  return marker;
 }
 
 export default class Highlighter {
@@ -37,6 +49,8 @@ export default class Highlighter {
 
     this.bindRenderLine();
     this.bindMousedown();
+    bindCopyOnHover(this.editor);
+    bindFoldSelection(this.editor);
     this.editor.refresh();
     this.editor.focus();
   }
@@ -117,6 +131,7 @@ export default class Highlighter {
   }
 
   getEditorOptions() {
+    const foldGutter = this.options.structure.foldGutter !== false;
     const obligatory = {
       value: this.text,
       theme: this.theme,
@@ -124,7 +139,10 @@ export default class Highlighter {
       mode: "application/ld+json",
       indentUnit: 2,
       tabSize: 2,
-      gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+      gutters: foldGutter
+        ? ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+        : ["CodeMirror-linenumbers"],
+      foldOptions: { widget: makeFoldMarker },
       extraKeys: this.getExtraKeysMap()
     };
 
